@@ -2,46 +2,48 @@
 Self Driving Car Simulator using PyGame module and NEAT Algorithm
 """
 import sys
+import os
 import math
+import pickle
 import pygame
 import neat
 
+# Pygame initialization
 pygame.init()
 pygame.display.set_caption("SELF DRIVING CAR SIMULATOR")
 WINDOW_SIZE = 1280, 720
 SCREEN = pygame.display.set_mode(WINDOW_SIZE, pygame.FULLSCREEN)
 CAR_SIZE = 30, 51
 CAR_CENTER = 195, 290
-DELTA_DISTANCE = 30
-DELTA_ANGLE = 10
+DELTA_DISTANCE = 10
+DELTA_ANGLE = 5
 WHITE_COLOR = (255, 255, 255, 255)
-TRACK = pygame.image.load('track.png').convert_alpha()
+TRACK = pygame.image.load('track2.png').convert_alpha()
 TRACK_COPY = TRACK.copy()
 FONT = pygame.font.SysFont("bahnschrift", 25)
 CLOCK = pygame.time.Clock()
-GENERATION = 0
+
+# Checkpoint settings
+CHECKPOINT_DIR = "checkpoints"
+CHECKPOINT_PREFIX = "neat-checkpoint-"
+CHECKPOINT_FREQUENCY = 10
+os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+
+GENERATION = 0  # Tracks current generation
 
 
 def translate_point(point, angle, distance):
     """
-    Get the new co-ordinates of a given point w.r.t an angle and distance from that point
-
-    Args:
-        center (tuple): A tuple of x co-ordinate and y co-ordinate
-        angle (int): Angle of rotation of the vector
-        distance (float): The distance by which the point needs
-        to be translated (magnitude of the vector)
-
-    Returns:
-        tuple: Translated co-ordinates of the point
+    Get the new coordinates of a given point w.r.t. an angle and distance from that point.
     """
     radians = math.radians(angle)
-    return int(point[0] + distance * math.cos(radians)),\
-        int(point[1] + distance * math.sin(radians))
+    return int(point[0] + distance * math.cos(radians)), \
+           int(point[1] + distance * math.sin(radians))
+
 
 class Car:
     """
-    Implentation of the self driving car
+    Implementation of the self-driving car
     """
     def __init__(self):
         self.corners = []
@@ -57,7 +59,7 @@ class Car:
 
     def display_car(self):
         """
-        Rotate the car and the display it on the screen
+        Rotate the car and display it on the screen
         """
         rotated_car = pygame.transform.rotate(self.car, self.angle)
         rect = rotated_car.get_rect(center=self.car_center)
@@ -66,8 +68,6 @@ class Car:
     def crash_check(self):
         """
         Check if any corner of the car goes out of the track
-        Returns:
-            Bool: Returns True if the car is alive
         """
         for corner in self.corners:
             if TRACK.get_at(corner) == WHITE_COLOR:
@@ -76,8 +76,7 @@ class Car:
 
     def update_sensor_data(self):
         """
-        Update the points on the edge of the track
-        and the distances between the points and the center of the car
+        Update the points on the edge of the track and the distances between the points and the center of the car
         """
         angles = [360 - self.angle, 90 - self.angle, 180 - self.angle]
         angles = [math.radians(i) for i in angles]
@@ -95,10 +94,9 @@ class Car:
         self.edge_points = edge_points
         self.edge_distances = edge_distances
 
-
     def display_edge_points(self):
         """
-        Display lines from center of the car to the edges on the  track
+        Display lines from the center of the car to the edges on the track
         """
         for point in self.edge_points:
             pygame.draw.line(SCREEN, (0, 255, 0), self.car_center, point)
@@ -111,7 +109,7 @@ class Car:
         self.car_center = translate_point(
             self.car_center, 90 - self.angle, DELTA_DISTANCE)
         self.travelled_distance += DELTA_DISTANCE
-        dist = math.sqrt(CAR_SIZE[0]**2 + CAR_SIZE[1]**2)/2
+        dist = math.sqrt(CAR_SIZE[0]**2 + CAR_SIZE[1]**2) / 2
         corners = []
         corners.append(translate_point(
             self.car_center, 60 - self.angle, dist))
@@ -171,15 +169,34 @@ def run(genomes, config):
         text = FONT.render(msg, True, (0, 0, 0))
         SCREEN.blit(text, (0, 0))
         pygame.display.update()
-        CLOCK.tick(10)
+        CLOCK.tick(60)  # Run at 60 FPS
 
 
-neat_config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
-                                 neat.DefaultSpeciesSet, neat.DefaultStagnation,
-                                 "config.txt")
+# Load from checkpoint if available
+checkpoint_file = None
+if os.path.exists(CHECKPOINT_DIR):
+    checkpoint_files = [f for f in os.listdir(CHECKPOINT_DIR) if f.startswith(CHECKPOINT_PREFIX)]
+    if checkpoint_files:
+        # Sort checkpoints numerically based on their suffix
+        checkpoint_files.sort(key=lambda x: int(x.split('-')[-1]))
+        checkpoint_file = os.path.join(CHECKPOINT_DIR, checkpoint_files[-1])  # Load the latest checkpoint
 
-population = neat.Population(neat_config)
+if checkpoint_file:
+    print(f"Loading from checkpoint: {checkpoint_file}")
+    population = neat.Checkpointer.restore_checkpoint(checkpoint_file)
+    GENERATION = int(checkpoint_file.split('-')[-1])  # Extract generation from filename
+else:
+    neat_config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
+                                     neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                                     "config.txt")
+    population = neat.Population(neat_config)
+
+# Add reporters to the population
 population.add_reporter(neat.StdOutReporter(True))
 stats = neat.StatisticsReporter()
 population.add_reporter(stats)
+checkpointer = neat.Checkpointer(CHECKPOINT_FREQUENCY, filename_prefix=os.path.join(CHECKPOINT_DIR, CHECKPOINT_PREFIX))
+population.add_reporter(checkpointer)
+
+# Run the simulation
 population.run(run, 500)
