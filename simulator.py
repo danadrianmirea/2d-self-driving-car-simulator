@@ -12,19 +12,20 @@ import neat
 pygame.init()
 pygame.display.set_caption("SELF DRIVING CAR SIMULATOR")
 WINDOW_SIZE = 1280, 720
-SCREEN = pygame.display.set_mode(WINDOW_SIZE, pygame.FULLSCREEN)
+SCREEN = pygame.display.set_mode(WINDOW_SIZE)
 CAR_SIZE = 30, 51
 CAR_CENTER = 195, 290
 DELTA_DISTANCE = 10
 DELTA_ANGLE = 5
+TRACK_NAME="track3"
 WHITE_COLOR = (255, 255, 255, 255)
-TRACK = pygame.image.load('track2.png').convert_alpha()
+TRACK = pygame.image.load(TRACK_NAME+'.png').convert_alpha()
 TRACK_COPY = TRACK.copy()
 FONT = pygame.font.SysFont("bahnschrift", 25)
 CLOCK = pygame.time.Clock()
 
 # Checkpoint settings
-CHECKPOINT_DIR = "checkpoints"
+CHECKPOINT_DIR = "checkpoints_"+TRACK_NAME
 CHECKPOINT_PREFIX = "neat-checkpoint-"
 CHECKPOINT_FREQUENCY = 10
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
