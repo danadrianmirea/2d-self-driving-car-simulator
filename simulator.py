@@ -1,6 +1,3 @@
-"""
-Self Driving Car Simulator using PyGame module and NEAT Algorithm
-"""
 import sys
 import os
 import math
