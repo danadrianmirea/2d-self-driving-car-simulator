@@ -170,7 +170,7 @@ def run(genomes, config):
         text = FONT.render(msg, True, (0, 0, 0))
         SCREEN.blit(text, (0, 0))
         pygame.display.update()
-        CLOCK.tick(60)  # Run at 60 FPS
+        CLOCK.tick(30)  # Run at 60 FPS
 
 
 # Load from checkpoint if available
@@ -200,4 +200,4 @@ checkpointer = neat.Checkpointer(CHECKPOINT_FREQUENCY, filename_prefix=os.path.j
 population.add_reporter(checkpointer)
 
 # Run the simulation
-population.run(run, 500)
+population.run(run, 1000)
